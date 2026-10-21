@@ -1,0 +1,86 @@
+EMA dApp Architecture Principles (Provisional)
+
+Positioning
+
+This document describes the pre-deployment architecture for a future EMADATA (EMA) relaunch.
+It is a provisional, unaudited, and undeployed design.
+
+Existing EMA reference contract:
+0x61b397ade3ed9c1511abff20a3a4701a3a52ecdc
+
+This design does not modify the existing contract. Any future deployment from this
+repository will receive a different contract address.
+
+Core EMA Information
+
+- Intended network: Arbitrum One
+- Token name: EMADATA
+- Symbol: EMA
+- Standard: ERC-20
+- Initial supply: 777,000,000 EMA
+- Decimals: 18
+- Transfer / buy / sell tax: 0%
+- Rewards / reflection: None
+- Additional minting: None
+- Burn: Self-burn only
+- Permit: EIP-2612
+- Owner / administrator / pause / upgrade / proxy: None
+
+Base Architecture
+
+The EMA base token is separated from dApp-specific protocol contracts.
+
+1. EMA Base Token
+
+- Arbitrum One ERC-20
+- Fixed initial supply of 777,000,000 EMA
+- 0% transfer / buy / sell tax
+- No rewards or reflection
+- No additional minting
+- Self-burn only
+- EIP-2612 Permit support
+- No owner, administrator, pause, upgrade, or proxy authority
+
+2. dApp Protocol Contracts
+
+- Connect to EMA through IERC20
+- Use OpenZeppelin SafeERC20 for token transfers
+- Use IERC20Permit for signature-based approvals when Permit is enabled
+- Place dApp-specific functions, restrictions, and update procedures in this layer
+- Keep 0628BET and prediction-market logic separate from the base token
+
+3. Frontend
+
+- Support Arbitrum One-compatible wallets
+- Display EMA balances
+- Support Permit signatures or standard approvals
+- Interact with the relevant dApp protocol contracts
+- Clearly disclose source code, audit status, and deployment addresses on GitHub
+
+Reasons for Separation
+
+- New dApps can be added without reissuing the EMA base token
+- A 0% tax and no-reflection design prevents unexpected balance changes
+- The attack surface of the base token remains small
+- Audit, pause, and upgrade policies can be designed independently for each dApp
+- Standard compatibility with wallets, DEXs, and Arbitrum explorers is easier to preserve
+
+Items to Confirm Before Deployment
+
+- Wallet receiving the initial supply
+- Migration and distribution criteria for existing EMA holders
+- Whether any fixed restrictions belong in the base token or the dApp layer
+- Whether ERC20Votes is required for on-chain voting or delegation
+- Arbitrum Sepolia testing procedures
+- Independent security audit procedures
+- Official deployment address publication
+
+Not Adopted in the Base Token
+
+- dApp-specific logic embedded in the token contract
+- Transfer, buy, or sell taxes
+- Automatic holder rewards
+- Reflection
+- DEX-pair detection
+- Automatic distribution to a marketing wallet
+- Post-deployment minting

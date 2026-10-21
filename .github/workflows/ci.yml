@@ -1,0 +1,36 @@
+name: Token CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  compile-test-typecheck:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Compile, run contract tests, and type-check
+        run: npm run check
+      - name: Check out pinned Wallet integration suite
+        uses: actions/checkout@v4
+        with:
+          repository: FordPerfect2027/ThreeCore-Wallet
+          ref: 1ec47f1d5c4b709932f9ae1c1f4768a33053c50b
+          path: .wallet-integration
+          persist-credentials: false
+      - name: Verify current token with Wallet on both simulated chain IDs
+        run: node --test .wallet-integration/integration/token-compatibility.test.mjs
