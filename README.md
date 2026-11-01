@@ -437,7 +437,7 @@ A short, recent 250-block window is the default. The CLI uses a public Base Main
 
 ## Read-only Wallet readiness (DAT / EMA / CAWELON)
 
-This repository includes a token-specific `src/wallet-readiness.js` adapter and `scripts/inspect-wallet-readiness.js` for checking a **public Base Mainnet wallet address**. It reads native ETH balance (potential gas funding), this token's `balanceOf`, and the **existing** ERC-20 `allowance` from that public address to the published Aerodrome Classic Router. All five reads use the same observed block height to avoid a mixed-block snapshot; both token and router contracts must have bytecode at that block. A nonzero allowance is a possible spender exposure **not a trading authorization**.
+This repository includes a token-specific `src/wallet-readiness.js` adapter and `scripts/inspect-wallet-readiness.js` for checking a **public Base Mainnet wallet address**. It reads native ETH balance (potential gas funding), this token's `balanceOf`, and the **existing** ERC-20 `allowance` from that public address to the published Aerodrome Classic Router. All five reads require the same provider-reported canonical block hash, followed by a header and network recheck; both token and router contracts must have bytecode at that block. A nonzero allowance is a possible spender exposure **not a trading authorization**.
 
 ```sh
 npm run test:read-only
@@ -462,7 +462,7 @@ The command uses a read-only HTTPS Base RPC endpoint, requires no browser-wallet
 
 ## Aerodrome Classic DEX price quotes (read-only)
 
-This token repository includes `src/dex-quote.js` and `scripts/quote-dex.js` for **fee-aware, contract-derived price quotes** on the token's existing volatile pool against native USDC on Base Mainnet. The tool checks the Aerodrome Classic `PoolFactory.getPool` and `isPool`, pool deployed bytecode, exact token pair, volatile pool status, reserves, token decimals and the pool's `getAmountOut(uint256,address)` method. **All readings are pinned to one block** and no wallet is accessed.
+This token repository includes `src/dex-quote.js` and `scripts/quote-dex.js` for **fee-aware, contract-derived price quotes** on the token's existing volatile pool against native USDC on Base Mainnet. The tool checks the Aerodrome Classic `PoolFactory.getPool` and `isPool`, pool deployed bytecode, exact token pair, volatile pool status, reserves, token decimals and the pool's `getAmountOut(uint256,address)` method. **All state readings require one canonical block hash, rechecked before returning** and no wallet is accessed.
 
 ```sh
 npm run test:read-only
@@ -531,3 +531,7 @@ This detects a differing final chain ID; it cannot prove RPC trustworthiness or
 observe a temporary chain switch that changes back. Block pinning alone is not
 cross-chain protection. No live wallet was connected and no approval, signature,
 transfer, trading action, gas expenditure or deployed token contract was changed.
+
+## Canonical balance and reference-quote reads (November 2, 2026)
+
+The [canonical-state correction](docs/CANONICAL_STATE_READS_2026-11-02.md) also covers public ETH/token balances, existing allowances and pool reference quotes. Unsupported hash selectors fail without falling back. The full read-only suite now has 194 passing cases, including the identity correction; these are regression cases, not a release-completion percentage.

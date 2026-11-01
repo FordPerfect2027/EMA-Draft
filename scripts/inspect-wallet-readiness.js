@@ -9,7 +9,7 @@
  */
 import { createPublicClient, http } from "viem";
 import { base } from "viem/chains";
-import { inspectWalletReadiness } from "../src/wallet-readiness.js";
+import { WalletReadinessError, inspectWalletReadiness } from "../src/wallet-readiness.js";
 
 const [publicWalletAddress, ...extra] = process.argv.slice(2);
 if (!publicWalletAddress || extra.length) {
@@ -32,10 +32,10 @@ try {
   const report = await inspectWalletReadiness(client, publicWalletAddress);
   process.stdout.write(JSON.stringify(report, null, 2) + "\n");
 } catch (error) {
+  const code = error instanceof WalletReadinessError ? error.code : "RPC_ERROR";
   process.stderr.write(
     "Read-only Wallet readiness check failed: " +
-    (error?.code ?? "RPC_ERROR") + " " +
-    (error?.message ?? String(error)) + "\n",
+    code + "\n",
   );
   process.exitCode = 1;
 }
