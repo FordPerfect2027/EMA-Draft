@@ -410,7 +410,7 @@ Passing local checks and explorer verification are not substitutes for an indepe
 
 ## Read-only Base Mainnet token identity verification (Ford Prefect)
 
-This repository now includes an independently executable verifier for the **existing EMA Base Mainnet ERC-20 contract**. It checks the expected chain ID, deployed bytecode, `name()`, `symbol()`, `decimals()`, and `totalSupply()` at a **single public block height**. The original issuance reference is recorded as **777000000 EMA (18 decimals)** from the current deployed contract identity; this verifier does not mint, deploy, change supply, or modify any contract.
+This repository now includes an independently executable verifier for the **existing EMA Base Mainnet ERC-20 contract**. It checks the expected chain ID, deployed bytecode, `name()`, `symbol()`, `decimals()`, and `totalSupply()` at a **single provider-reported canonical block hash**. The original issuance reference is recorded as **777000000 EMA (18 decimals)** from the current deployed contract identity; this verifier does not mint, deploy, change supply, or modify any contract.
 
 ```bash
 npm run check                   # compile + contract tests (including identity tests) + typecheck
@@ -418,6 +418,8 @@ npm run verify:base-mainnet     # optional live Base Mainnet read-only RPC verif
 ```
 
 The live verification uses the read-only public Base RPC (`https://mainnet.base.org`) by default. Optionally configure `BASE_MAINNET_READ_RPC_URL` for a trusted HTTPS Base Mainnet read endpoint. It does **not** access a wallet, private key, seed phrase, token allowance, transaction-signing method, or trading service. It fails with an error if the network, bytecode or deployed metadata differs, or if the current supply exceeds the issuance reference. A lower supply following burns is valid and is reported separately. A successful match confirms only this narrow identity check: **it is not an independent security audit**.
+
+The [November 2 canonical-read correction](docs/CANONICAL_IDENTITY_2026-11-02.md) requires EIP-1898 hash selectors for code and metadata, rechecks the block hash and chain after reading, and fails if the provider cannot honor that request. The runtime-code hash is an observation fingerprint, not a verified match against compiled source. CLI failures report a stable error code without printing provider URLs or response contents.
 
 A verified ERC-20 token contract is not itself a functioning AI agent, independent operating wallet, or third-party dApp integration. Work on connection to decentralized services is separately tracked in [ThreeCore-Wallet](https://github.com/FordPerfect2027/ThreeCore-Wallet). Actual wallet connection, approvals, DEX trading, transfers, and autonomous operation require separate verification and authorization. These source improvements do not affect existing Base Mainnet token contracts.
 
