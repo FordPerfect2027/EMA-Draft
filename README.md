@@ -535,3 +535,7 @@ transfer, trading action, gas expenditure or deployed token contract was changed
 ## Canonical balance and reference-quote reads (November 2, 2026)
 
 The [canonical-state correction](docs/CANONICAL_STATE_READS_2026-11-02.md) also covers public ETH/token balances, existing allowances and pool reference quotes. Unsupported hash selectors fail without falling back. The full read-only suite now has 194 passing cases, including the identity correction; these are regression cases, not a release-completion percentage.
+
+## History command validation (November 2, 2026)
+
+The [history CLI correction](docs/HISTORY_CLI_2026-11-02.md) rejects invalid addresses, oversized integer text and known invalid ranges before RPC. Provider failures are redacted and are not retried automatically. Full read-only coverage is now 213 passing cases per token, including positive-event CLI transport checks; this supersedes the overlapping 194-case checkpoint.
