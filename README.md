@@ -539,3 +539,8 @@ The [canonical-state correction](docs/CANONICAL_STATE_READS_2026-11-02.md) also 
 ## History command validation (November 2, 2026)
 
 The [history CLI correction](docs/HISTORY_CLI_2026-11-02.md) rejects invalid addresses, oversized integer text and known invalid ranges before RPC. Provider failures are redacted and are not retried automatically. Full read-only coverage is now 213 passing cases per token, including positive-event CLI transport checks; this supersedes the overlapping 194-case checkpoint.
+
+
+## Read-only runtime installation (November 2, 2026)
+
+The [runtime installation correction](docs/READ_ONLY_RUNTIME_2026-11-02.md) makes viem an explicit runtime dependency. A fresh installation with development and optional dependencies omitted passes all 213 read-only cases for this token. This smaller profile does not include contract compilation tools; the full development Zod finding remains open.
