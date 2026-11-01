@@ -9,7 +9,8 @@
  * The query returns public event history + allowance as of one block.
  * It cannot approve token spending, trade or change a wallet.
  */
-import { createPublicClient, http } from "viem";
+import { createPublicClient } from "viem";
+import { createReadOnlyHttp } from "../src/read-only-http.js";
 import { base } from "viem/chains";
 import { ApprovalHistoryError, APPROVAL_LIMITS, inspectApprovalHistory } from "../src/approval-history.js";
 import { HistoryCliInputError, parseHistoryCli, historyRpcUrl } from "../src/history-cli-input.js";
@@ -19,7 +20,7 @@ try {
   const rpcUrl = historyRpcUrl(process.env.THREECORE_READONLY_LOG_RPC ?? "https://base-rpc.publicnode.com");
   const client = createPublicClient({
     chain: base,
-    transport: http(rpcUrl, { timeout: 12000, retryCount: 0 }),
+    transport: createReadOnlyHttp(rpcUrl),
   });
   const end = to ?? await client.getBlockNumber({ cacheTime: 0 });
   const start = from ?? (end >= 249n ? end - 249n : 0n);

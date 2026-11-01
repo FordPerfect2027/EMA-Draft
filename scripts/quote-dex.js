@@ -8,7 +8,8 @@
  * Exact raw input base units must be supplied. The quote will change as
  * liquidity, trading fees and routes change. THIS IS NOT A TRADE OR ORDER.
  */
-import { createPublicClient, http } from "viem";
+import { createPublicClient } from "viem";
+import { createReadOnlyHttp } from "../src/read-only-http.js";
 import { base } from "viem/chains";
 import { DEPLOYED_TOKEN } from "../src/onchain-identity.js";
 import { DexQuoteError, quoteClassicDex } from "../src/dex-quote.js";
@@ -32,7 +33,7 @@ try {
   }
   const client = createPublicClient({
     chain: base,
-    transport: http(rpcUrl, { retryCount: 0, timeout: 12000 }),
+    transport: createReadOnlyHttp(rpcUrl),
   });
   const result = await quoteClassicDex(client, {
     direction, amountInBaseUnits: BigInt(input),

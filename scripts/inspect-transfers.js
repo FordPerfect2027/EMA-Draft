@@ -9,7 +9,8 @@
  * a full transaction history or balance, and it never executes a trade.
  */
 import { base } from "viem/chains";
-import { createPublicClient, http } from "viem";
+import { createPublicClient } from "viem";
+import { createReadOnlyHttp } from "../src/read-only-http.js";
 import { TransferHistoryError, TRANSFER_HISTORY_LIMITS, inspectAccountTransfers } from "../src/transfer-history.js";
 import { HistoryCliInputError, parseHistoryCli, historyRpcUrl } from "../src/history-cli-input.js";
 
@@ -18,7 +19,7 @@ try {
   const rpcUrl = historyRpcUrl(process.env.THREECORE_READONLY_LOG_RPC ?? "https://base-rpc.publicnode.com");
   const client = createPublicClient({
     chain: base,
-    transport: http(rpcUrl, { timeout: 12000, retryCount: 0 }),
+    transport: createReadOnlyHttp(rpcUrl),
   });
   const end = to ?? await client.getBlockNumber({ cacheTime: 0 });
   const start = from ?? (end >= 249n ? end - 249n : 0n);
