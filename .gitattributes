@@ -1,0 +1,3 @@
+
+# Solidity metadata hashes source bytes; use LF on every platform.
+/contracts/** text eol=lf

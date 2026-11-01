@@ -546,3 +546,5 @@ The [history CLI correction](docs/HISTORY_CLI_2026-11-02.md) rejects invalid add
 The [runtime installation correction](docs/READ_ONLY_RUNTIME_2026-11-02.md) makes viem an explicit runtime dependency. A fresh installation with development and optional dependencies omitted passes all 213 read-only cases for this token. This smaller profile does not include contract compilation tools; the full development Zod finding remains open.
 
 The five operational read-only commands now keep their 12-second request deadline through response-body consumption. See [the correction and reproducible checks](docs/RPC_BODY_DEADLINE_2026-11-02.md).
+
+[Contract source portability](docs/SOURCE_PORTABILITY_2026-11-02.md): compilation requires UTF-8/LF source bytes so platform line-ending conversion cannot silently change the candidate artifact.
