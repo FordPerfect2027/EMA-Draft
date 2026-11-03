@@ -9,50 +9,31 @@
  * The query returns public event history + allowance as of one block.
  * It cannot approve token spending, trade or change a wallet.
  */
-import { createPublicClient, http } from "viem";
+import { createPublicClient } from "viem";
+import { createReadOnlyHttp } from "../src/read-only-http.js";
 import { base } from "viem/chains";
-import { inspectApprovalHistory } from "../src/approval-history.js";
-
-const [ownerAddress, firstBlock, lastBlock, ...extra] = process.argv.slice(2);
-if (!ownerAddress || extra.length ||
-    typeof ownerAddress !== "string" ||
-    !/^0x[0-9a-fA-F]{40}$/.test(ownerAddress)) {
-  process.stderr.write(
-    "Usage: node scripts/inspect-approvals.js PUBLIC_WALLET [START_BLOCK] [END_BLOCK]\n",
-  );
-  process.exit(2);
-}
-function parsedHeight(value) {
-  if (value === undefined) return undefined;
-  if (!/^(0|[1-9][0-9]*)$/.test(value)) {
-    throw new Error("Block must be a nonnegative decimal integer");
-  }
-  return BigInt(value);
-}
+import { ApprovalHistoryError, APPROVAL_LIMITS, inspectApprovalHistory } from "../src/approval-history.js";
+import { HistoryCliInputError, parseHistoryCli, historyRpcUrl } from "../src/history-cli-input.js";
 
 try {
-  const rpcUrl = process.env.THREECORE_READONLY_LOG_RPC ?? "https://base-rpc.publicnode.com";
-  const url = new URL(rpcUrl);
-  if (url.protocol !== "https:" || url.username || url.password || url.search || url.hash) {
-    throw new Error("The public log RPC must use HTTPS without credentials or query tokens");
-  }
+  const { address: ownerAddress, from, to } = parseHistoryCli(process.argv.slice(2), APPROVAL_LIMITS.maximumBlockSpan);
+  const rpcUrl = historyRpcUrl(process.env.THREECORE_READONLY_LOG_RPC ?? "https://base-rpc.publicnode.com");
   const client = createPublicClient({
     chain: base,
-    transport: http(rpcUrl, { timeout: 12000, retryCount: 0 }),
+    transport: createReadOnlyHttp(rpcUrl),
   });
-  const from = parsedHeight(firstBlock);
-  const to = parsedHeight(lastBlock);
-  const tip = await client.getBlockNumber();
-  const end = to ?? tip;
+  const end = to ?? await client.getBlockNumber({ cacheTime: 0 });
   const start = from ?? (end >= 249n ? end - 249n : 0n);
   const report = await inspectApprovalHistory(client, {
     ownerAddress, fromBlock: start, toBlock: end,
   });
   process.stdout.write(JSON.stringify(report, null, 2) + "\n");
 } catch (error) {
+  const inputError = error instanceof HistoryCliInputError;
+  const code = inputError || error instanceof ApprovalHistoryError ? error.code : "RPC_ERROR";
   process.stderr.write(
-    "Read-only Approval inspection failed: " +
-    (error?.code ?? "RPC_ERROR") + " " + (error?.message ?? String(error)) + "\n",
+    "Read-only Approval inspection failed: " + code + "\n",
   );
-  process.exitCode = 1;
+  if (inputError) process.stderr.write("Usage: node scripts/inspect-approvals.js PUBLIC_WALLET [START_BLOCK] [END_BLOCK]\n");
+  process.exitCode = inputError ? 2 : 1;
 }

@@ -34,3 +34,25 @@ jobs:
           persist-credentials: false
       - name: Verify current token with Wallet on both simulated chain IDs
         run: node --test .wallet-integration/integration/token-compatibility.test.mjs
+
+  read-only-runtime:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [22, 24]
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - name: Install only the locked read-only runtime
+        run: npm ci --omit=dev --omit=optional --ignore-scripts --no-audit --no-fund
+      - name: Verify commands without the contract build toolchain
+        run: node --test --test-concurrency=2 test/*.test.mjs

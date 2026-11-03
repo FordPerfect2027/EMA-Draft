@@ -11,6 +11,7 @@
  */
 import { erc20Abi } from "viem";
 import { DEPLOYED_TOKEN } from "./onchain-identity.js";
+import { canonicalStateRead } from "./canonical-state-read.js";
 
 export const CLASSIC_ROUTER = "0xcf77a3ba9a5ca399b7c97c74d54e5b1beb874e43";
 
@@ -49,52 +50,36 @@ function deployedCode(value, field) {
  */
 export async function inspectWalletReadiness(publicClient, walletAddress) {
   const wallet = checkAddress(walletAddress);
-  if (!publicClient ||
-      !["getChainId", "getBlockNumber", "getBytecode", "getBalance", "readContract"]
-        .every((method) => typeof publicClient[method] === "function")) {
-    fail("INVALID_CLIENT", "A viem read-only public client is required");
-  }
-  const chainId = await publicClient.getChainId();
-  if (chainId !== DEPLOYED_TOKEN.chainId) {
-    fail("WRONG_NETWORK", "The RPC must be Base Mainnet");
-  }
-  const blockNumber = uint(await publicClient.getBlockNumber(), "blockNumber");
+  const chainId = DEPLOYED_TOKEN.chainId;
+  const snapshot = await canonicalStateRead(publicClient, chainId, fail, "WRONG_NETWORK");
+  const blockNumber = snapshot.blockNumber;
   // Block-pinned checks prevent treating observations from different blocks
   // as one snapshot. Code presence does NOT constitute an audit.
   const [tokenCode, routerCode] = await Promise.all([
-    publicClient.getBytecode({
-      address: DEPLOYED_TOKEN.contractAddress, blockNumber,
-    }),
-    publicClient.getBytecode({
-      address: CLASSIC_ROUTER, blockNumber,
-    }),
+    snapshot.getCode(DEPLOYED_TOKEN.contractAddress, "MISSING_CONTRACT"),
+    snapshot.getCode(CLASSIC_ROUTER, "MISSING_CONTRACT"),
   ]);
   deployedCode(tokenCode, "Token");
   deployedCode(routerCode, "Aerodrome Classic Router");
 
   const [ethWei, tokenUnits, routerAllowance] = await Promise.all([
-    publicClient.getBalance({ address: wallet, blockNumber }),
-    publicClient.readContract({
-      address: DEPLOYED_TOKEN.contractAddress, abi: erc20Abi,
-      functionName: "balanceOf", args: [wallet], blockNumber,
-    }),
-    publicClient.readContract({
-      address: DEPLOYED_TOKEN.contractAddress, abi: erc20Abi,
-      functionName: "allowance", args: [wallet, CLASSIC_ROUTER], blockNumber,
-    }),
+    snapshot.getBalance(wallet),
+    snapshot.readContract(DEPLOYED_TOKEN.contractAddress, erc20Abi, "balanceOf", [wallet]),
+    snapshot.readContract(DEPLOYED_TOKEN.contractAddress, erc20Abi, "allowance", [wallet, CLASSIC_ROUTER]),
   ]);
   const gasBalance = uint(ethWei, "native balance");
   const tokenBalance = uint(tokenUnits, "token balance");
   const allowance = uint(routerAllowance, "router allowance");
   // Recheck the chain before reporting balances and existing approvals.
   // Block pinning alone cannot detect an RPC provider switching networks.
-  if (await publicClient.getChainId() !== DEPLOYED_TOKEN.chainId) {
-    fail("NETWORK_CHANGED", "RPC network changed during wallet inspection");
-  }
+  await snapshot.recheck();
   return Object.freeze({
     agent: DEPLOYED_TOKEN.tokenSymbol,
     chainId,
     observedBlockNumber: blockNumber.toString(),
+    observedBlockHash: snapshot.blockHash,
+    canonicalBlockRequired: true,
+    canonicalBlockRechecked: true,
     contractAddress: DEPLOYED_TOKEN.contractAddress,
     publicWalletAddress: wallet,
     classicRouterAddress: CLASSIC_ROUTER,

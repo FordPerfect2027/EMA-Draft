@@ -11,6 +11,7 @@
  */
 import { parseAbi } from "viem";
 import { DEPLOYED_TOKEN } from "./onchain-identity.js";
+import { canonicalStateRead } from "./canonical-state-read.js";
 
 export const CLASSIC_DEX = Object.freeze({
   chainId: 8453,
@@ -77,22 +78,15 @@ export async function quoteClassicDex(client, {
       amountInBaseUnits <= 0n || amountInBaseUnits > MAX_UINT256) {
     fail("INVALID_AMOUNT", "Quote input must be positive base-unit bigint");
   }
-  if (!client || !["getChainId", "getBlockNumber", "getBytecode", "readContract"].every(
-    method => typeof client[method] === "function",
-  )) {
-    fail("INVALID_CLIENT", "Read-only viem public client is required");
-  }
-  const chainId = await client.getChainId();
-  if (chainId !== CLASSIC_DEX.chainId) fail("WRONG_CHAIN", "Base Mainnet is required");
-  const block = amount(await client.getBlockNumber());
+  const chainId = CLASSIC_DEX.chainId;
+  const snapshot = await canonicalStateRead(client, chainId, fail, "WRONG_CHAIN");
+  const block = snapshot.blockNumber;
   const factory = CLASSIC_DEX.factory;
   const token = DEPLOYED_TOKEN.contractAddress.toLowerCase();
   const usdc = CLASSIC_DEX.usdc;
 
   async function read(address, abi, functionName, args = []) {
-    return client.readContract({
-      address, abi, functionName, args, blockNumber: block,
-    });
+    return snapshot.readContract(address, abi, functionName, args);
   }
   const poolValue = await read(factory, FACTORY_ABI, "getPool",
     [DEPLOYED_TOKEN.contractAddress, usdc, false]);
@@ -100,7 +94,7 @@ export async function quoteClassicDex(client, {
   if (pool === ZERO) fail("NO_POOL", "Aerodrome Classic volatile pair is absent");
   const [isPool, bytecode] = await Promise.all([
     read(factory, FACTORY_ABI, "isPool", [poolValue]),
-    client.getBytecode({ address: poolValue, blockNumber: block }),
+    snapshot.getCode(poolValue, "MISSING_POOL_CODE"),
   ]);
   if (isPool !== true) fail("UNREGISTERED_POOL", "PoolFactory does not recognize pool");
   if (typeof bytecode !== "string" ||
@@ -149,15 +143,16 @@ export async function quoteClassicDex(client, {
 
   // Reconfirm the network after block-pinned reads: RPC providers can switch
   // chains while a quote is pending, producing a misleading snapshot.
-  if (await client.getChainId() !== CLASSIC_DEX.chainId) {
-    fail("NETWORK_CHANGED", "RPC network changed during the read-only quote");
-  }
+  await snapshot.recheck();
 
   return Object.freeze({
     agent: DEPLOYED_TOKEN.tokenSymbol,
     network: "Base Mainnet",
     chainId,
     blockNumber: block.toString(),
+    blockHash: snapshot.blockHash,
+    canonicalBlockRequired: true,
+    canonicalBlockRechecked: true,
     dex: "Aerodrome Classic",
     factoryAddress: factory,
     poolAddress: pool,

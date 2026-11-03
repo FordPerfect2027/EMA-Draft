@@ -8,15 +8,16 @@
  * Exact raw input base units must be supplied. The quote will change as
  * liquidity, trading fees and routes change. THIS IS NOT A TRADE OR ORDER.
  */
-import { createPublicClient, http } from "viem";
+import { createPublicClient } from "viem";
+import { createReadOnlyHttp } from "../src/read-only-http.js";
 import { base } from "viem/chains";
 import { DEPLOYED_TOKEN } from "../src/onchain-identity.js";
-import { quoteClassicDex } from "../src/dex-quote.js";
+import { DexQuoteError, quoteClassicDex } from "../src/dex-quote.js";
 
 const [direction = "buy", input = direction === "buy"
   ? "1000000" : "1000000000000000000", ...extra] = process.argv.slice(2);
 if (extra.length || !["buy", "sell"].includes(direction) ||
-    !/^[1-9][0-9]*$/.test(input)) {
+    input.length > 78 || !/^[1-9][0-9]*$/.test(input)) {
   process.stderr.write(
     "Usage: node scripts/quote-dex.js buy|sell POSITIVE_INTEGER_BASE_UNITS\n",
   );
@@ -32,17 +33,17 @@ try {
   }
   const client = createPublicClient({
     chain: base,
-    transport: http(rpcUrl, { retryCount: 0, timeout: 12000 }),
+    transport: createReadOnlyHttp(rpcUrl),
   });
   const result = await quoteClassicDex(client, {
     direction, amountInBaseUnits: BigInt(input),
   });
   process.stdout.write(JSON.stringify(result, null, 2) + "\n");
 } catch (error) {
+  const code = error instanceof DexQuoteError ? error.code : "RPC_ERROR";
   process.stderr.write(
     DEPLOYED_TOKEN.tokenSymbol + " read-only DEX quote failed: " +
-    (error?.code ?? "RPC_ERROR") + " " +
-    (error?.message ?? String(error)) + "\n",
+    code + "\n",
   );
   process.exitCode = 1;
 }
