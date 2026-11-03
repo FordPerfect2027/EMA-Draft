@@ -23,7 +23,7 @@
     "inspect:wallet": "node scripts/inspect-wallet-readiness.js",
     "inspect:approvals": "node scripts/inspect-approvals.js",
     "quote:dex": "node scripts/quote-dex.js",
-    "test:toolchain": "node --test integration/toolchain-data.test.mjs integration/zod-migration.test.mjs"
+    "test:toolchain": "node --test integration/toolchain-data.test.mjs integration/zod-migration.test.mjs integration/config-validation.test.mjs"
   },
   "dependencies": {
     "@openzeppelin/contracts": "5.6.1",
